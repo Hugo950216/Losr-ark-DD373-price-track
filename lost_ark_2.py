@@ -50,13 +50,18 @@ def fetch_data(result_queue):
                 
                 values = []
                 prices = []
+                links = []
                 for element, title in zip(elements[:5], titles[:5]):
                     value = float(element.inner_text().split('=')[1].strip().split('金')[0])
                     price = float(title.inner_text().split('=')[1].strip().split('元')[0])
+                    link = title.get_attribute('href')
+                    if link:
+                        link = "https://www.dd373.com" + link
                     values.append(value)
                     prices.append(price)
+                    links.append(link)
                 
-                result_queue.put((values, prices))
+                result_queue.put((values, prices, links))
             except Exception as e:
                 print(f"發生錯誤: {e}")
                 result_queue.put(["Error: " + str(e)])
@@ -76,13 +81,14 @@ def update_prices():
 def check_queue(result_queue):
     try:
         result = result_queue.get_nowait()
-        if isinstance(result, tuple) and len(result) == 2:
-            values, prices = result
+        if isinstance(result, tuple) and len(result) == 3:
+            values, prices, links = result
             if values and not any(isinstance(value, str) and value.startswith("Error") for value in values):
                 current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
                 update_time_var.set(f"更新時間: {current_time}")
-                for i, (value, price) in enumerate(zip(values, prices)):
+                for i, (value, price, link) in enumerate(zip(values, prices, links)):
                     price_vars[i].set(f"{value:.2f} (價格: {price:.2f}元)")
+                    price_links[i] = link  # 儲存連結
                 
                 average = sum(values) / len(values)
                 twd_rate = average / 4.5
@@ -188,9 +194,18 @@ price_frame = ttk.Frame(frame_dd373)
 price_frame.pack(pady=10)
 
 price_vars = [tk.StringVar() for _ in range(5)]
+price_links = [None] * 5  # 儲存連結的列表
+
+def open_link(index):
+    if price_links[index]:
+        import webbrowser
+        webbrowser.open(price_links[index])
+
 for i in range(5):
     ttk.Label(price_frame, text=f"最佳比值 #{i + 1}:", font=('Roboto', 11)).grid(row=i, column=0, sticky='e', padx=(0, 10), pady=5)
-    ttk.Label(price_frame, textvariable=price_vars[i], font=('Roboto', 11, 'bold'), foreground='#2196F3').grid(row=i, column=1, sticky='w', columnspan=2, pady=5)
+    link_label = ttk.Label(price_frame, textvariable=price_vars[i], font=('Roboto', 11, 'bold'), foreground='#2196F3', cursor="hand2")
+    link_label.grid(row=i, column=1, sticky='w', columnspan=2, pady=5)
+    link_label.bind("<Button-1>", lambda e, i=i: open_link(i))
 
 average_frame = ttk.Frame(frame_dd373)
 average_frame.pack(pady=10)
