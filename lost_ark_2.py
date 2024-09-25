@@ -41,6 +41,11 @@ def fetch_data(result_queue):
             
             url = "https://www.dd373.com/s-1w5rsv-rmn8x6-s4habc-0-0-0-b9dbv6-0-0-0-0-0-1-0-5-0.html"
             
+            page.set_extra_http_headers({
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept-Language': 'en-US,en;q=0.9',
+            })
+            
             try:
                 page.goto(url, timeout=60000)
                 page.wait_for_timeout(5000)
